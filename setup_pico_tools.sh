@@ -141,7 +141,7 @@ else
     ui_run "Installing USB udev rule" write_udev
     ui_item info "Replug the scope" "so the new permissions apply"
 fi
-if ldconfig -p | grep -q 'libps4000a\.so'; then
+if ldconfig -p | grep 'libps4000a\.so' > /dev/null; then
     ui_item skip "Driver library path"
 else
     ui_run "Registering $PICO_LIB" register_libs
@@ -159,7 +159,7 @@ fi
 # 7. Verify
 ui_step "Verifying"
 failed=0
-if ldconfig -p | grep -q 'libps4000a\.so'; then
+if ldconfig -p | grep 'libps4000a\.so' > /dev/null; then
     ui_item ok "ps4000a driver library installed"
 else
     ui_item fail "ps4000a driver library installed" "see log"
@@ -171,7 +171,7 @@ else
     ui_item fail "Python environment ready" "see log"
     failed=1
 fi
-if lsusb 2>/dev/null | grep -qi 'ID 0ce9:'; then
+if lsusb -d 0ce9: > /dev/null 2>&1; then
     ui_item ok "PicoScope connected over USB"
 else
     ui_item warn "No PicoScope found on USB" "plug it in to test"
