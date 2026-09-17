@@ -89,6 +89,9 @@ pip install .                     # from a clone of this repo
 | `pico-tools test --range 5V` | Use a smaller range for low voltages |
 | `pico-tools test --duration 0.5` | Capture for 500 ms |
 | `pico-tools test --plot` | Also save the capture to `capture.png` |
+| `pico-tools poll` | Keep reading Channel A and B every 0.5 s until Ctrl+C |
+| `pico-tools poll --range 5V --interval 1` | Poll at ±5 V once a second |
+| `pico-tools poll --count 10` | Take 10 readings and stop |
 | `pico-tools --version` | Show the installed version |
 
 Use it from Python:
@@ -100,6 +103,19 @@ with Scope() as scope:
     cap = scope.capture(range_name="5V", duration_s=0.1)
 
 print(cap.volts["A"].mean())   # average voltage on Channel A
+```
+
+Poll continuously - open the scope once, then capture in a loop:
+
+```python
+import time
+from pico_tools.scope import Scope
+
+with Scope() as scope:
+    while True:
+        cap = scope.capture(range_name="20V", duration_s=0.1)
+        print(f"A: {cap.volts['A'].mean():.3f} V   B: {cap.volts['B'].mean():.3f} V", flush=True)
+        time.sleep(0.5)
 ```
 
 ## 📦 What gets installed
