@@ -236,7 +236,7 @@ if (( ! PYTHON_ONLY )); then
     }
     no_pkgs()    { [[ -z $(find_pico_pkgs) ]]; }
     no_sources() { [[ -z $(find_repo_files) ]] && ! main_list_has_pico; }
-    no_driver()  { ! ldconfig -p | grep -qE '(libps[0-9]+[a-z]*|libpsospa|libpicoipp)\.so'; }
+    no_driver()  { ! ldconfig -p | grep -E '(libps[0-9]+[a-z]*|libpsospa|libpicoipp)\.so' > /dev/null; }
     no_files()   { [[ ! -e $UDEV_RULE && ! -e $LD_CONF && ! -e $PICO_ROOT ]]; }
     check "No Pico packages installed" no_pkgs
     check "No Pico apt sources configured" no_sources
