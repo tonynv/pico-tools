@@ -8,11 +8,13 @@
 
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-24.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
 [![PicoScope](https://img.shields.io/badge/PicoScope-4225A-0072CE?style=for-the-badge)](https://www.picoauto.com/)
-[![Python](https://img.shields.io/badge/Python-3-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![PyPI](https://img.shields.io/pypi/v/pico-tools?style=for-the-badge&logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/pico-tools/)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Shell](https://img.shields.io/badge/Bash-scripts-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](#-quick-start)
 [![License](https://img.shields.io/badge/License-Apache_2.0-D22128?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
 
 [Quick start](#-quick-start) •
+[Python package](#-python-package) •
 [What gets installed](#-what-gets-installed) •
 [Uninstall](#-uninstall) •
 [Troubleshooting](#-troubleshooting) •
@@ -35,12 +37,12 @@ This repo accompanies a YouTube walkthrough of the full install. You can follow 
 
 |   | Feature | Description |
 |---|---------|-------------|
-| 🚀 | **One-command setup** | Updates Ubuntu, adds the Pico repository, installs PicoScope 7, drivers and Python libraries |
+| 🚀 | **One-command setup** | Updates Ubuntu, adds the Pico repository, installs PicoScope 7 and drivers, and creates a Python environment |
 | 🔁 | **Idempotent** | Safe to run again at any time. Steps that are already done are skipped |
 | 🧹 | **Clean removal** | Removes everything the setup added, and only that |
 | 🔌 | **No sudo for the scope** | Installs a USB `udev` rule so your user can access the scope |
-| 🐍 | **Python ready** | Creates a virtual environment with the official PicoSDK wrappers, numpy and matplotlib |
-| 📈 | **Channel test** | Captures from Channel A and B and reports min / max / mean voltage |
+| 🐍 | **pip installable** | `pip install pico-tools` gives you the `pico-tools` command and a Python API |
+| 📈 | **Channel test** | `pico-tools test` captures Channel A and B and reports min / max / mean voltage |
 
 ## 🧰 Requirements
 
@@ -49,7 +51,8 @@ This repo accompanies a YouTube walkthrough of the full install. You can follow 
 | **OS** | Ubuntu 24.04 LTS (64-bit, `amd64`) |
 | **Hardware** | PicoScope 4225A connected over USB |
 | **Access** | A user account with `sudo` rights |
-| **Network** | Internet access to reach `labs.picotech.com` and GitHub |
+| **Python** | 3.9 or newer (Ubuntu 24.04 ships 3.12) |
+| **Network** | Internet access to reach `labs.picotech.com`, GitHub and PyPI |
 
 ## 🚀 Quick start
 
@@ -59,11 +62,44 @@ cd pico-tools
 ./setup_pico_tools.sh
 ```
 
-Then **close PicoScope 7**, connect a test lead and run:
+Then install the Python package, **close PicoScope 7**, connect a test lead and run a capture:
 
 ```bash
 source ~/picoscope-env/bin/activate
-python tools/test_channels.py
+pip install .            # from this repo, or: pip install pico-tools
+pico-tools test
+```
+
+## 🐍 Python package
+
+`pico-tools` is a regular Python package with a command line tool and a small API.
+
+> [!NOTE]
+> pip installs the Python side only. The native `libps4000a` driver comes from Pico's apt repository, which `./setup_pico_tools.sh` installs.
+
+```bash
+pip install pico-tools            # from PyPI
+pip install "pico-tools[plot]"    # with matplotlib for --plot
+pip install .                     # from a clone of this repo
+```
+
+| Command | What it does |
+|---------|--------------|
+| `pico-tools test` | Capture 100 ms from Channel A and B at ±20 V |
+| `pico-tools test --range 5V` | Use a smaller range for low voltages |
+| `pico-tools test --duration 0.5` | Capture for 500 ms |
+| `pico-tools test --plot` | Also save the capture to `capture.png` |
+| `pico-tools --version` | Show the installed version |
+
+Use it from Python:
+
+```python
+from pico_tools.scope import Scope
+
+with Scope() as scope:
+    cap = scope.capture(range_name="5V", duration_s=0.1)
+
+print(cap.volts["A"].mean())   # average voltage on Channel A
 ```
 
 ## 📦 What gets installed
@@ -73,7 +109,7 @@ flowchart LR
     A[🐧 Ubuntu update<br/>& prerequisites] --> B[🔑 Pico apt<br/>repository]
     B --> C[📺 PicoScope 7<br/>& ps4000a driver]
     C --> D[🔌 USB udev<br/>rule]
-    D --> E[🐍 Python venv<br/>& PicoSDK]
+    D --> E[🐍 Python<br/>venv]
     E --> F[✅ Verify]
 ```
 
@@ -91,10 +127,12 @@ flowchart LR
 pico-tools/
 ├── setup_pico_tools.sh     # Install and configure everything
 ├── remove_pico_tools.sh    # Undo everything setup installed
+├── pyproject.toml          # Python package definition (PyPI: pico-tools)
 ├── lib/
 │   └── ui.sh               # Shared terminal styling for the scripts
-└── tools/
-    └── test_channels.py    # Quick Channel A / B capture test
+└── src/pico_tools/
+    ├── cli.py              # pico-tools command line
+    └── scope.py            # ps4000a capture API
 ```
 
 ## 📈 Testing the scope
@@ -106,12 +144,12 @@ pico-tools/
 | 12 V car battery | About `12.6 V` |
 
 ```bash
-python tools/test_channels.py --range 5V   # smaller range for low voltages
-python tools/test_channels.py --plot       # also save capture.png
+pico-tools test --range 5V   # smaller range for low voltages
+pico-tools test --plot       # also save capture.png
 ```
 
 > [!IMPORTANT]
-> Only one program can use the scope at a time. **Close PicoScope 7** before running Python scripts.
+> Only one program can use the scope at a time. **Close PicoScope 7** before running `pico-tools`.
 
 ## 🧹 Uninstall
 
@@ -124,7 +162,7 @@ python tools/test_channels.py --plot       # also save capture.png
 ## 🛠️ Troubleshooting
 
 <details>
-<summary><b>Script says "Could not open scope"</b></summary>
+<summary><b><code>pico-tools test</code> says "Could not open the scope"</b></summary>
 
 - Make sure PicoScope 7 is closed.
 - Check that the scope appears on USB: `lsusb | grep 0ce9`
