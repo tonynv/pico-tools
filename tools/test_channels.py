@@ -38,10 +38,11 @@ def open_scope():
 
 
 def capture(handle, range_name, duration_s):
-    range_key = f"PS4000A_{range_name.upper()}"
-    if range_key not in ps.PS4000A_RANGE:
-        sys.exit(f"Unknown range {range_name}. Try e.g. 1V, 5V, 20V, 50V.")
-    range_idx = ps.PS4000A_RANGE[range_key]
+    # The 4000A driver names its input ranges as x1 probe ranges, e.g. PICO_X1_PROBE_20V
+    range_key = f"PICO_X1_PROBE_{range_name.upper()}"
+    if range_key not in ps.PICO_CONNECT_PROBE_RANGE:
+        sys.exit(f"Unknown range {range_name}. Try e.g. 500MV, 1V, 5V, 20V, 50V.")
+    range_idx = ps.PICO_CONNECT_PROBE_RANGE[range_key]
 
     for name in CHANNELS.values():
         assert_pico_ok(ps.ps4000aSetChannel(
