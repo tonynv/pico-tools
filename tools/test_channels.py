@@ -5,20 +5,32 @@ Captures a short block on Channel A (blue) and Channel B (red) and prints
 min / max / mean voltage for each. Close PicoScope 7 before running.
 
 Usage:
-    source ~/picoscope-env/bin/activate
-    python tools/test_channels.py              # ±20 V, 100 ms capture
-    python tools/test_channels.py --range 5V   # smaller range for an AA battery
-    python tools/test_channels.py --plot       # also save capture.png
+    ./tools/test_channels.py                   # ±20 V, 100 ms capture
+    ./tools/test_channels.py --range 5V        # smaller range for an AA battery
+    ./tools/test_channels.py --plot            # also save capture.png
+
+Runs with the ~/picoscope-env Python automatically, so activating the
+virtual environment first is optional.
 """
 import argparse
 import ctypes
+import os
 import sys
 import time
 
-import numpy as np
-from picosdk.constants import PICO_STATUS
-from picosdk.functions import adc2mV, assert_pico_ok
-from picosdk.ps4000a import ps4000a as ps
+VENV_DIR = os.path.expanduser("~/picoscope-env")
+
+try:
+    import numpy as np
+    from picosdk.constants import PICO_STATUS
+    from picosdk.functions import adc2mV, assert_pico_ok
+    from picosdk.ps4000a import ps4000a as ps
+except ModuleNotFoundError as err:
+    venv_python = os.path.join(VENV_DIR, "bin", "python")
+    if os.path.realpath(sys.prefix) != os.path.realpath(VENV_DIR) and os.path.exists(venv_python):
+        # Started with the system Python: switch to the PicoScope environment
+        os.execv(venv_python, [venv_python, os.path.abspath(__file__), *sys.argv[1:]])
+    sys.exit(f"Missing Python library ({err.name}). Run ./setup_pico_tools.sh first.")
 
 NUM_SAMPLES = 10_000
 CHANNELS = {"A": "PS4000A_CHANNEL_A", "B": "PS4000A_CHANNEL_B"}
