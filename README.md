@@ -10,6 +10,7 @@
 [![PicoScope](https://img.shields.io/badge/PicoScope-4225A-0072CE?style=for-the-badge)](https://www.picoauto.com/)
 [![Python](https://img.shields.io/badge/Python-3-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Shell](https://img.shields.io/badge/Bash-scripts-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](#-quick-start)
+[![License](https://img.shields.io/badge/License-Apache_2.0-D22128?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
 
 [Quick start](#-quick-start) •
 [What gets installed](#-what-gets-installed) •
@@ -142,6 +143,10 @@ python tools/test_channels.py --plot       # also save capture.png
 
 Re-run `./setup_pico_tools.sh`. It registers `/opt/picoscope/lib` with the system linker.
 </details>
+
+## 📄 License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
 
 ## 🎬 Watch the video
 
