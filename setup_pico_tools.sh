@@ -3,7 +3,7 @@
 #
 # Updates Ubuntu, adds the Pico Technology apt repository, installs
 # PicoScope 7 and the ps4000a driver, sets USB permissions and creates a
-# Python virtual environment with the PicoSDK wrappers.
+# Python virtual environment for the pico-tools package (pip install pico-tools).
 #
 # Idempotent: re-running only does the work that is still missing.
 set -euo pipefail
@@ -21,7 +21,6 @@ UDEV_RULE=/etc/udev/rules.d/95-pico.rules
 UDEV_LINE='ATTRS{idVendor}=="0ce9", MODE="0666"'
 LD_CONF=/etc/ld.so.conf.d/picoscope.conf
 PICO_LIB=/opt/picoscope/lib
-WRAPPERS_URL=git+https://github.com/picotech/picosdk-python-wrappers.git
 
 PREREQS=(ca-certificates curl gnupg git python3 python3-venv python3-pip usbutils)
 PICO_PKGS=(picoscope libps4000a libpicoipp)
@@ -59,7 +58,7 @@ write_udev()      { echo "$UDEV_LINE" | sudo tee "$UDEV_RULE" > /dev/null \
                         && sudo udevadm control --reload-rules && sudo udevadm trigger; }
 register_libs()   { echo "$PICO_LIB" | sudo tee "$LD_CONF" > /dev/null && sudo ldconfig; }
 create_venv()     { python3 -m venv "$VENV_DIR"; }
-pip_install()     { "$VENV_DIR/bin/pip" install --upgrade "$@"; }
+upgrade_pip()     { "$VENV_DIR/bin/pip" install --upgrade pip; }
 
 missing_pkgs() {
     local pkg
@@ -68,7 +67,6 @@ missing_pkgs() {
 
 file_has() { [[ -f $1 && $(cat "$1") == "$2" ]]; }
 
-venv_has() { [[ -x $VENV_DIR/bin/python ]] && "$VENV_DIR/bin/python" -c "import $1" 2>/dev/null; }
 
 # --- Go -----------------------------------------------------------------------
 UI_TOTAL_STEPS=7
@@ -150,30 +148,27 @@ else
 fi
 
 # 6. Python
-ui_step "Setting up the Python environment"
+ui_step "Creating the Python environment"
 if [[ -x $VENV_DIR/bin/python ]]; then
     ui_item skip "Virtual environment" "$VENV_DIR"
 else
     ui_run "Creating virtual environment" create_venv
-fi
-if venv_has numpy && venv_has matplotlib; then
-    ui_item skip "numpy and matplotlib"
-else
-    ui_run "Installing numpy and matplotlib" pip_install pip numpy matplotlib
-fi
-if venv_has picosdk; then
-    ui_item skip "PicoSDK Python wrappers"
-else
-    ui_run "Installing PicoSDK Python wrappers" pip_install "$WRAPPERS_URL"
+    ui_run "Upgrading pip" upgrade_pip
 fi
 
 # 7. Verify
 ui_step "Verifying"
 failed=0
-if "$VENV_DIR/bin/python" -c "from picosdk.ps4000a import ps4000a" >> "$UI_LOG" 2>&1; then
-    ui_item ok "Python loads the ps4000a driver"
+if ldconfig -p | grep -q 'libps4000a\.so'; then
+    ui_item ok "ps4000a driver library installed"
 else
-    ui_item fail "Python loads the ps4000a driver" "see log"
+    ui_item fail "ps4000a driver library installed" "see log"
+    failed=1
+fi
+if [[ -x $VENV_DIR/bin/pip ]]; then
+    ui_item ok "Python environment ready" "$VENV_DIR"
+else
+    ui_item fail "Python environment ready" "see log"
     failed=1
 fi
 if lsusb 2>/dev/null | grep -qi 'ID 0ce9:'; then
@@ -184,9 +179,9 @@ fi
 
 (( failed )) && ui_die "Setup finished with errors. Log: $UI_LOG"
 
-ui_summary "PicoScope tools are ready" \
+ui_summary "PicoScope driver is ready - install pico-tools next" \
     "" \
-    "1. Close PicoScope 7 (only one program can use the scope)" \
-    "2. source ~/picoscope-env/bin/activate" \
-    "3. python tools/test_channels.py" \
+    "1. source ~/picoscope-env/bin/activate" \
+    "2. pip install pico-tools      (or: pip install . in this repo)" \
+    "3. Close PicoScope 7, then run:  pico-tools test" \
     ""
