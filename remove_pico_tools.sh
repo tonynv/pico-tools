@@ -15,6 +15,7 @@ source "$REPO_DIR/lib/ui.sh"
 
 VENV_DIR="$HOME/picoscope-env"
 WRAPPERS_CLONE="$HOME/picosdk-python-wrappers"
+CMD_LINK="$HOME/.local/bin/pico-tools"
 PICO_HOST='labs\.picotech\.com'
 APT_SOURCES_DIR=/etc/apt/sources.list.d
 APT_MAIN_LIST=/etc/apt/sources.list
@@ -122,9 +123,12 @@ show() { # show yes|no <label>
     fi
 }
 exists() { [[ -e $1 ]] && echo yes || echo no; }
+# Only the link setup created (pointing into our venv), never another pico-tools install
+our_link() { [[ -L $CMD_LINK && $(readlink "$CMD_LINK") == "$VENV_DIR/bin/pico-tools" ]]; }
 
 show "$(exists "$VENV_DIR")" "Python environment      $VENV_DIR"
 show "$(exists "$WRAPPERS_CLONE")" "PicoSDK wrapper clone   $WRAPPERS_CLONE"
+show "$(our_link && echo yes || echo no)" "pico-tools command     $CMD_LINK"
 if (( ! PYTHON_ONLY )); then
     if (( ${#pkgs[@]} )); then
         show yes "Pico packages (${#pkgs[@]})     ${pkgs[*]}"
@@ -170,6 +174,11 @@ if [[ -d $VENV_DIR ]]; then
     ui_run "Deleting $VENV_DIR" rm -rf "$VENV_DIR"
 else
     ui_item skip "Virtual environment" "not present"
+fi
+if our_link; then
+    ui_run "Removing $CMD_LINK" rm -f "$CMD_LINK"
+else
+    ui_item skip "pico-tools command link" "not present"
 fi
 if [[ -d $WRAPPERS_CLONE ]]; then
     ui_run "Deleting $WRAPPERS_CLONE" rm -rf "$WRAPPERS_CLONE"
