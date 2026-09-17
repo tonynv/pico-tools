@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pico-tools"
+dynamic = ["version"]
+description = "Linux helper tools for the PicoScope 4225A automotive oscilloscope"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Tony Vattathil", email = "avattathil@gmail.com" }]
+requires-python = ">=3.9"
+keywords = ["picoscope", "oscilloscope", "automotive", "picosdk", "ps4000a", "4225a"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Topic :: System :: Hardware",
+]
+dependencies = [
+    "numpy>=1.21",
+    "picosdk>=1.1",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.5"]
+
+[project.scripts]
+pico-tools = "pico_tools.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/tonynv/pico-tools"
+Source = "https://github.com/tonynv/pico-tools"
+Issues = "https://github.com/tonynv/pico-tools/issues"
+YouTube = "https://www.youtube.com/@timbertronic"
+
+[tool.hatch.version]
+path = "src/pico_tools/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/pico_tools", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pico_tools"]
