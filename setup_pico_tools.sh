@@ -13,6 +13,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$REPO_DIR/lib/ui.sh"
 
 VENV_DIR="$HOME/picoscope-env"
+CMD_LINK="$HOME/.local/bin/pico-tools"
 KEYRING=/usr/share/keyrings/picotech-archive-keyring.gpg
 KEY_URL=https://labs.picotech.com/Release.gpg.key
 REPO_LIST=/etc/apt/sources.list.d/picoscope7.list
@@ -59,6 +60,7 @@ write_udev()      { echo "$UDEV_LINE" | sudo tee "$UDEV_RULE" > /dev/null \
 register_libs()   { echo "$PICO_LIB" | sudo tee "$LD_CONF" > /dev/null && sudo ldconfig; }
 create_venv()     { python3 -m venv "$VENV_DIR"; }
 upgrade_pip()     { "$VENV_DIR/bin/pip" install --upgrade pip; }
+link_cmd()        { mkdir -p "$(dirname "$CMD_LINK")" && ln -sfn "$VENV_DIR/bin/pico-tools" "$CMD_LINK"; }
 
 missing_pkgs() {
     local pkg
@@ -155,6 +157,12 @@ else
     ui_run "Creating virtual environment" create_venv
     ui_run "Upgrading pip" upgrade_pip
 fi
+# Put pico-tools on the PATH without activating the venv (works once pip installs it)
+if [[ -L $CMD_LINK && $(readlink "$CMD_LINK") == "$VENV_DIR/bin/pico-tools" ]]; then
+    ui_item skip "pico-tools command link" "$CMD_LINK"
+else
+    ui_run "Linking pico-tools into ~/.local/bin" link_cmd
+fi
 
 # 7. Verify
 ui_step "Verifying"
@@ -182,6 +190,6 @@ fi
 ui_summary "PicoScope driver is ready - install pico-tools next" \
     "" \
     "1. source ~/picoscope-env/bin/activate" \
-    "2. pip install pico-tools      (or: pip install . in this repo)" \
+    "2. pip install .               (from this repo; PyPI: pico-tools)" \
     "3. Close PicoScope 7, then run:  pico-tools test" \
     ""
