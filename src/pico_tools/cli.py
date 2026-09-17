@@ -1,6 +1,7 @@
 """pico-tools command line interface."""
 import argparse
 import sys
+import time
 
 from pico_tools import __version__
 
@@ -39,6 +40,29 @@ def cmd_test(args):
     return 0
 
 
+def cmd_poll(args):
+    from pico_tools.scope import Scope
+
+    print(f"Polling Channel A and B at ±{args.range.upper()} every {args.interval:g} s - Ctrl+C to stop",
+          flush=True)
+    with Scope() as scope:
+        n = 0
+        try:
+            while args.count == 0 or n < args.count:
+                cap = scope.capture(args.range, args.duration)
+                cols = []
+                for ch, v in cap.volts.items():
+                    flag = "!" if cap.over_range(ch) else " "
+                    cols.append(f"{ch}: mean {v.mean():7.3f} V  pk-pk {v.max() - v.min():7.3f} V{flag}")
+                print(f"{time.strftime('%H:%M:%S')}  " + "   ".join(cols), flush=True)
+                n += 1
+                if args.count == 0 or n < args.count:
+                    time.sleep(args.interval)
+        except KeyboardInterrupt:
+            print()
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="pico-tools",
@@ -55,6 +79,15 @@ def build_parser():
     test.add_argument("--plot", nargs="?", const="capture.png", metavar="FILE",
                       help="also save a plot (default file: capture.png)")
     test.set_defaults(func=cmd_test)
+
+    poll = sub.add_parser("poll", help="keep capturing and print a line per reading until Ctrl+C",
+                          description="Repeatedly capture Channel A and B and print mean and peak-to-peak "
+                                      "voltage. '!' marks a reading that went over range. Close PicoScope 7 first.")
+    poll.add_argument("--range", default="20V", help="input range, e.g. 500MV, 5V, 20V (default: 20V)")
+    poll.add_argument("--interval", type=float, default=0.5, help="seconds between readings (default: 0.5)")
+    poll.add_argument("--duration", type=float, default=0.1, help="capture length per reading in seconds (default: 0.1)")
+    poll.add_argument("--count", type=int, default=0, help="stop after this many readings (default: 0 = forever)")
+    poll.set_defaults(func=cmd_poll)
     return parser
 
 
