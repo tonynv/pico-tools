@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 capture.png
 *.csv
+dist/
+build/
+*.egg-info/
+.venv/
