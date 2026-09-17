@@ -1,0 +1,76 @@
+"""pico-tools command line interface."""
+import argparse
+import sys
+
+from pico_tools import __version__
+
+COLOURS = {"A": "blue", "B": "red"}
+
+
+def cmd_test(args):
+    from pico_tools.scope import Scope
+
+    with Scope() as scope:
+        cap = scope.capture(args.range, args.duration)
+
+    print(f"Captured {len(cap.time_s)} samples over {cap.time_s[-1] * 1000:.1f} ms at ±{cap.range_name}\n")
+    for ch, v in cap.volts.items():
+        note = "  ** OVER RANGE - use a bigger --range **" if cap.over_range(ch) else ""
+        print(f"Channel {ch} ({COLOURS[ch]}): min {v.min():7.3f} V   "
+              f"max {v.max():7.3f} V   mean {v.mean():7.3f} V{note}")
+
+    if args.plot:
+        try:
+            import matplotlib
+        except ImportError:
+            print("\n--plot needs matplotlib: pip install 'pico-tools[plot]'", file=sys.stderr)
+            return 1
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        for ch, v in cap.volts.items():
+            plt.plot(cap.time_s * 1000, v, color=f"tab:{COLOURS[ch]}", label=f"Channel {ch}")
+        plt.xlabel("Time (ms)")
+        plt.ylabel("Voltage (V)")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.savefig(args.plot, dpi=120)
+        print(f"\nSaved plot to {args.plot}")
+    return 0
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="pico-tools",
+        description="Linux helper tools for the PicoScope 4225A automotive oscilloscope.",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    sub = parser.add_subparsers(dest="command", metavar="COMMAND")
+
+    test = sub.add_parser("test", help="capture Channel A and B and print min / max / mean voltage",
+                          description="Capture a short block from Channel A (blue) and Channel B (red). "
+                                      "Close PicoScope 7 first.")
+    test.add_argument("--range", default="20V", help="input range, e.g. 500MV, 5V, 20V (default: 20V)")
+    test.add_argument("--duration", type=float, default=0.1, help="capture length in seconds (default: 0.1)")
+    test.add_argument("--plot", nargs="?", const="capture.png", metavar="FILE",
+                      help="also save a plot (default file: capture.png)")
+    test.set_defaults(func=cmd_test)
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if not getattr(args, "func", None):
+        parser.print_help()
+        return 1
+
+    from pico_tools.scope import ScopeError
+
+    try:
+        return args.func(args)
+    except ScopeError as err:
+        print(f"Error: {err}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
